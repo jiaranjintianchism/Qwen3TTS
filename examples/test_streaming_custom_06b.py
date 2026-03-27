@@ -20,9 +20,9 @@ def main():
     attn_impl = os.environ.get("QWEN3_TTS_ATTN_IMPL", "flash_attention_2")
     test_text = os.environ.get(
         "QWEN3_TTS_TEXT",
-        "Streaming generation for 0.6B CustomVoice is running in the local repository.",
+        "你好，这是一段用于测试零点六B自定义音色流式合成效果的中文语音。",
     )
-    language = os.environ.get("QWEN3_TTS_LANGUAGE", "English")
+    language = os.environ.get("QWEN3_TTS_LANGUAGE", "Chinese")
     speaker = os.environ.get("QWEN3_TTS_SPEAKER", "Ryan")
     emit_every_frames = int(os.environ.get("QWEN3_TTS_EMIT_EVERY_FRAMES", "16"))
     decode_window_frames = int(os.environ.get("QWEN3_TTS_DECODE_WINDOW_FRAMES", "128"))

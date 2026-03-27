@@ -285,6 +285,28 @@ sf.write("output_voice_clone_2.wav", wavs[1], sr)
 
 For more examples of reusable voice clone prompts, batch cloning, and batch inference, please refer to the [example codes](https://github.com/QwenLM/Qwen3-TTS/blob/main/examples/test_model_12hz_base.py). With those examples and the `generate_voice_clone` function description, you can explore more advanced usage patterns.
 
+You can also stream voice-clone generation chunk by chunk:
+
+```python
+import numpy as np
+import soundfile as sf
+
+chunks = []
+for chunk, sr in model.stream_generate_voice_clone(
+    text="Streaming generation is enabled in this local repo.",
+    language="English",
+    ref_audio=ref_audio,
+    ref_text=ref_text,
+    emit_every_frames=8,
+    decode_window_frames=80,
+):
+    chunks.append(chunk)
+
+sf.write("output_voice_clone_streaming.wav", np.concatenate(chunks), sr)
+```
+
+If you want lower latency or better throughput for repeated runs, call `model.enable_streaming_optimizations(...)` once after loading the model. Local runnable examples are provided in `examples/test_streaming.py`, `examples/test_streaming_optimized.py`, and `examples/test_optimized_no_streaming.py`.
+
 #### Voice Design then Clone
 
 If you want a designed voice that you can reuse like a cloned speaker, a practical workflow is: (1) use the **VoiceDesign** model to synthesize a short reference clip that matches your target persona, (2) feed that clip into `create_voice_clone_prompt` to build a reusable prompt, and then (3) call `generate_voice_clone` with `voice_clone_prompt` to generate new content without re-extracting features every time. This is especially useful when you want a consistent character voice across many lines.

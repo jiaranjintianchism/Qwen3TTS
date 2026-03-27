@@ -17,17 +17,52 @@ def main():
         "QWEN3_TTS_MODEL_PATH",
         r"e:\Qwen3-TTS\models\Qwen3-TTS-12Hz-0.6B-CustomVoice",
     )
-    attn_impl = os.environ.get("QWEN3_TTS_ATTN_IMPL", "sdpa")
+    attn_impl = os.environ.get("QWEN3_TTS_ATTN_IMPL", "flash_attention_2")
+    test_text = os.environ.get(
+        "QWEN3_TTS_TEXT",
+        "Streaming generation for 0.6B CustomVoice is running in the local repository.",
+    )
+    language = os.environ.get("QWEN3_TTS_LANGUAGE", "English")
+    speaker = os.environ.get("QWEN3_TTS_SPEAKER", "Ryan")
+    emit_every_frames = int(os.environ.get("QWEN3_TTS_EMIT_EVERY_FRAMES", "16"))
+    decode_window_frames = int(os.environ.get("QWEN3_TTS_DECODE_WINDOW_FRAMES", "128"))
+    overlap_samples = int(os.environ.get("QWEN3_TTS_OVERLAP_SAMPLES", "0"))
+    max_frames = int(os.environ.get("QWEN3_TTS_MAX_FRAMES", "10000"))
+    enable_stream_opt = os.environ.get("QWEN3_TTS_ENABLE_STREAM_OPT", "1") != "0"
     has_cuda = torch.cuda.is_available()
     device_map = "cuda:0" if has_cuda else "cpu"
-    dtype = torch.bfloat16 if has_cuda else torch.float32
+    if has_cuda:
+        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    else:
+        dtype = torch.float32
 
-    model = Qwen3TTSModel.from_pretrained(
-        model_path,
-        device_map=device_map,
-        dtype=dtype,
-        attn_implementation=attn_impl,
-    )
+    try:
+        model = Qwen3TTSModel.from_pretrained(
+            model_path,
+            device_map=device_map,
+            dtype=dtype,
+            attn_implementation=attn_impl,
+        )
+    except Exception:
+        if attn_impl == "flash_attention_2":
+            model = Qwen3TTSModel.from_pretrained(
+                model_path,
+                device_map=device_map,
+                dtype=dtype,
+                attn_implementation="sdpa",
+            )
+        else:
+            raise
+
+    if enable_stream_opt:
+        model.enable_streaming_optimizations(
+            decode_window_frames=decode_window_frames,
+            use_compile=has_cuda,
+            use_cuda_graphs=has_cuda,
+            compile_mode="reduce-overhead",
+            compile_codebook_predictor=True,
+            compile_talker=True,
+        )
 
     start = time.time()
     chunks = []
@@ -35,11 +70,13 @@ def main():
     first_chunk_latency = None
 
     for chunk, chunk_sr in model.stream_generate_custom_voice(
-        text="Streaming generation for 0.6B CustomVoice is running in the local repository.",
-        language="English",
-        speaker="Ryan",
-        emit_every_frames=8,
-        decode_window_frames=80,
+        text=test_text,
+        language=language,
+        speaker=speaker,
+        emit_every_frames=emit_every_frames,
+        decode_window_frames=decode_window_frames,
+        overlap_samples=overlap_samples,
+        max_frames=max_frames,
     ):
         if first_chunk_latency is None:
             first_chunk_latency = time.time() - start
@@ -57,6 +94,11 @@ def main():
     print(f"audio_duration={audio_duration:.2f}s")
     print(f"rtf={rtf:.2f}")
     print(f"num_chunks={len(chunks)}")
+    print(f"attn_impl={attn_impl}")
+    print(f"device_map={device_map}")
+    print(f"dtype={dtype}")
+    print(f"emit_every_frames={emit_every_frames}")
+    print(f"decode_window_frames={decode_window_frames}")
     print("saved=output_streaming_custom_06b.wav")
 
 

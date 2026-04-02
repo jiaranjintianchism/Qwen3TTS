@@ -18,6 +18,7 @@ def main():
         "qwen_tts package.\n"
         "Use CLI entrypoints:\n"
         "  - qwen-tts-demo\n"
+        "  - qwen-tts-serve\n"
     )
 
 if __name__ == "__main__":

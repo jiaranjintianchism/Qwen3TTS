@@ -22,6 +22,7 @@ authors = [{ name = "Alibaba Qwen Team" }]
 dependencies = [
   "transformers==4.57.3",
   "accelerate==1.12.0",
+  "fastapi>=0.116,<1",
   "gradio",
   "librosa",
   "torchaudio",
@@ -29,6 +30,7 @@ dependencies = [
   "sox",
   "onnxruntime",
   "einops",
+  "uvicorn>=0.30,<1",
 ]
 
 [project.urls]
@@ -37,6 +39,7 @@ Repository = "https://github.com/Qwen/Qwen3-TTS"
 
 [project.scripts]
 qwen-tts-demo = "qwen_tts.cli.demo:main"
+qwen-tts-serve = "qwen_tts.cli.serve:main"
 
 [tool.setuptools]
 packages = { find = { where = ["."] , include = ["qwen_tts*"] } }
